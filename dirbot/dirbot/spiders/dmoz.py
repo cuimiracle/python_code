@@ -1,7 +1,11 @@
+# -*- coding: utf-8 -*-
 from scrapy.spiders import Spider
 from scrapy.selector import Selector
-import re
 from dirbot.items import Website
+import re
+import json
+import cPickle as pickle
+from functools import partial
 
 
 class DmozSpider(Spider):
@@ -23,21 +27,39 @@ class DmozSpider(Spider):
         sel = Selector(response)
         sites = sel.xpath('//ul[@class="directory-url"]/li')
         items = []
+        # tmp = []
 
         for site in sites:
             item = Website()
             item['name'] = site.xpath('a/text()').extract()
             item['url'] = site.xpath('a/@href').extract()
             item['description'] = site.xpath('text()').re('-\s[^\n]*\\r')
+            # tmp.append(dict(item))
             items.append(item)
-
-        start_url = response.url.rstrip('/').split('/')[-1];
-        regUrl = re.search(r'Books|Resources', start_url, re.IGNORECASE);
-
-        if regUrl != None:
-            filename = 'a.html';
-            with open(filename, 'a' ) as f:
-                f.write(response.url + response.body);
-
         return items
 
+        # print("=================================")
+        # tmpStr = json.dumps(tmp)
+        # print(tmpStr)
+        # print("#################################")
+
+        # start_url = response.url.rstrip('/').split('/')[-1];
+        # regUrl = re.search(r'Books|Resources', start_url, re.IGNORECASE);
+        #
+        # if regUrl != None:
+            # tmpFilename = regUrl.group(0);
+            # filename = regUrl.group(0) + '.json';
+
+            # tmpJsonItems = pickle.dumps(items)
+
+            # with open(tmpFilename, 'w' ) as f:
+            #     tmpJsonItems = pickle.dump(items, f)
+
+            # with open(tmpFilename, 'r') as f:
+            #     objItems = pickle.load(f)
+
+            # print("=================================")
+            # print(items)
+            # # pp = partial(json.dumps, indent=1)
+            # # pp(items)
+            # print("#################################")

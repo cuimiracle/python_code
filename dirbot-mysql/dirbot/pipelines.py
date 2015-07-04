@@ -1,32 +1,36 @@
+from datetime import datetime
+from hashlib import md5
+from scrapy import log
 from scrapy.exceptions import DropItem
 from twisted.enterprise import adbapi
-import datetime
-import MySQLdb.cursors
-import pymongo
-import logging
 
-# class FilterWordsPipeline(object):
-#     """A pipeline for filtering out items which contain certain words in their
-#     description"""
-#
-#     # put all words in lowercase
-#     words_to_filter = ['politics', 'religion']
-#
-#     def process_item(self, item, spider):
-#         self.stats.inc_value('pages_crawled')
-#         print self.stats.get_value('pages_crawled')
-#         for word in self.words_to_filter:
-#             if word in unicode(item['description']).lower():
-#                 raise DropItem("Contains forbidden word: %s" % word)
-#         else:
-#             return item
-#
-#     def __init__(self, stats):
-#         self.stats = stats
-#
-#     @classmethod
-#     def from_crawler(cls, crawler):
-#         return cls(crawler.stats)
+
+class FilterWordsPipeline(object):
+    """A pipeline for filtering out items which contain certain words in their
+    description"""
+
+    # put all words in lowercase
+    words_to_filter = ['politics', 'religion']
+
+    def process_item(self, item, spider):
+        for word in self.words_to_filter:
+            desc = item.get('description') or ''
+            if word in desc.lower():
+                raise DropItem("Contains forbidden word: %s" % word)
+        else:
+            return item
+
+
+class RequiredFieldsPipeline(object):
+    """A pipeline to ensure the item have the required fields."""
+
+    required_fields = ('name', 'description', 'url')
+
+    def process_item(self, item, spider):
+        for field in self.required_fields:
+            if not item.get(field):
+                raise DropItem("Field '%s' missing: %r" % (field, item))
+        return item
 
 
 class MySQLStorePipeline(object):
@@ -89,37 +93,9 @@ class MySQLStorePipeline(object):
     def _handle_error(self, failure, item, spider):
         """Handle occurred on db interaction."""
         # do nothing, just log
-        logging.log(logging.ERROR, failure)
+        log.err(failure)
 
     def _get_guid(self, item):
         """Generates an unique identifier for a given item."""
         # hash based solely in the url field
         return md5(item['url']).hexdigest()
-
-
-
-# class MongoPipeline(object):
-#
-#     collection_name = 'scrapy_items'
-#
-#     def __init__(self, mongo_uri, mongo_db):
-#         self.mongo_uri = mongo_uri
-#         self.mongo_db = mongo_db
-#
-#     @classmethod
-#     def from_crawler(cls, crawler):
-#         return cls(
-#             mongo_uri=crawler.settings.get('MONGO_URI'),
-#             mongo_db=crawler.settings.get('MONGO_DATABASE', 'items')
-#         )
-#
-#     def open_spider(self, spider):
-#         self.client = pymongo.MongoClient(self.mongo_uri)
-#         self.db = self.client[self.mongo_db]
-#
-#     def close_spider(self, spider):
-#         self.client.close()
-#
-#     def process_item(self, item, spider):
-#         self.db[self.collection_name].insert(dict(item))
-#         return item
